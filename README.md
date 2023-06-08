@@ -102,3 +102,5 @@ My initial hypothesis is that I will be able to use air quality and weather data
 #### Takeaways and Key Findings
 
 ### Recommendations and Next Steps
+
+* Given more time I would find a better way to more accurately merge the data, maybe even try some clustering techniques to find the 'hot zones' based on location
