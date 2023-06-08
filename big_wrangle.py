@@ -211,7 +211,25 @@ def prep_forest(pt):
     '''Prepare forest data'''
     # I use pt because usfs table was called plot_tree
     # drop them na trees
-    return pt[pt['tree_county_code'].notna()].copy()
+    pt = pt[pt['tree_county_code'].notna()].copy()
+    # map easy categorical values to 1 and 0
+    pt.tree_status_code_name = pt.tree_status_code_name.map({'Live tree':1,'Dead tree':0})
+    pt.invasive_sampling_status_code_name = pt.invasive_sampling_status_code_name.map({'Invasive plant data collected on all accessible land conditions':1,'Not collecting invasive plant data':0})
+    # Performed 9 aggregations grouped on columns: 'measurement_year', 'tree_county_code'
+    # used for merge so each row has most common tree and stats for county and year
+    return pt.groupby(
+        ['measurement_year', 'tree_county_code']
+            ).agg(
+                elevation_mean=('elevation', 'mean'), 
+                trees_per_acre_mean=('trees_per_acre_unadjusted', 'mean'),
+                most_common_water_source=('water_on_plot_code_name', lambda s: s.value_counts().index[0]),
+                most_common_species=('species_common_name', lambda s: s.value_counts().index[0]),
+                most_common_species_group=('species_group_code_name', lambda s: s.value_counts().index[0]),
+                height_mean=('total_height', 'mean'),
+                diameter_mean=('current_diameter', 'mean'),
+                percent_trees_alive=('tree_status_code_name', 'mean'),
+                percent_invasive_plant=('invasive_sampling_status_code_name', 'mean')
+                ).reset_index()
 
 def wrangle_forest():
     '''Wrangle some trees'''
@@ -234,8 +252,8 @@ def wrangle_forest_fires():
         sm_pt = pt[pt.measurement_year==year]
         # dropping tree nulls for merge
         sm_pt = sm_pt.dropna()
-        # fire tree merge on county to trees
-        sm_fpt = pd.merge(left=sm_fire,right=sm_pt,how='right',
+        # fire tree merge on county to fires
+        sm_fpt = pd.merge(left=sm_fire,right=sm_pt,how='left',
                             left_on='county_code',right_on='tree_county_code')
         # concat together
         fpt = sm_fpt if fpt is None else pd.concat([fpt,sm_fpt],ignore_index=True)
@@ -273,17 +291,15 @@ def wrangle_wildfires():
             'county_code1',
             'measurement_year',
             'tree_county_code',
-            'latitude_y',
-            'longitude_y',
-            'elevation',
-            'trees_per_acre',
-            'water_on_plot',
-            'species',
-            'species_group',
-            'height',
-            'diameter',
-            'tree_alive',
-            'invasive_sampling',
+            'elevation_mean',
+            'trees_per_acre_mean',
+            'most_common_water_source',
+            'most_common_species',
+            'most_common_species_group',
+            'height_mean',
+            'diameter_mean',
+            'percent_trees_alive',
+            'percent_invasive_plant',
             'date_local',
             'county_code2',
             'bp_mean',
@@ -303,34 +319,31 @@ def wrangle_wildfires():
             'fire_size_class',
             'lat',
             'long',
-            'elevation',
+            'elevation_mean',
             'county',
-            'trees_per_acre',
-            'water_on_plot',
-            'species',
-            'species_group',
-            'height',
-            'diameter',
-            'tree_alive',
-            'invasive_sampling',
+            'trees_per_acre_mean',
+            'most_common_water_source',
+            'most_common_species',
+            'most_common_species_group',
+            'height_mean',
+            'diameter_mean',
+            'percent_trees_alive',
+            'percent_invasive_plant',
             'co_mean',
             'temp_mean',
             'humidity_mean',
             'wind_direction_mean',
             'wind_speed_mean']]
         # get rid of nulls
-        ca = ca[(ca.co_mean.notna())&(ca.wind_speed_mean.notna())&(ca.humidity_mean.notna())&(ca.wind_direction_mean.notna())&(ca.time.notna())]
-        # map easy categorical values to 1 and 0
-        ca.tree_alive = ca.tree_alive.map({'Live tree':1,'Dead tree':0})
-        ca.invasive_sampling = ca.invasive_sampling.map({'Invasive plant data collected on all accessible land conditions':1,'Not collecting invasive plant data':0})
+        ca = ca.dropna()
         # make datetime to create features
         ca.date = ca.date.astype('datetime64[ns]')
         # fix dtype
-        ca.water_on_plot = ca.water_on_plot.astype(str)
+        ca.most_common_water_source = ca.most_common_water_source.astype(str)
         # get unique values for renaming
-        water = ca.water_on_plot.value_counts().sort_index().index.to_list()
+        water = ca.most_common_water_source.value_counts().sort_index().index.to_list()
         # rename values
-        ca.water_on_plot = ca.water_on_plot.map({
+        ca.most_common_water_source = ca.most_common_water_source.map({
             water[0]:'ditch_canal',
             water[1]:'flood_zone',
             water[2]:'none',
@@ -352,6 +365,16 @@ def wrangle_wildfires():
     else:
         # read prebuilt csv
         return pd.read_csv('ca_fire.csv')
+
+def encode(df):
+    '''Encode categorical columns'''
+    # columns to encode
+    cols = ['cause','most_common_water_source','most_common_species_group']
+    # cols = ['cause_class','cause','county','most_common_water_source','most_common_species','most_common_species_group']
+    # encode the dummies
+    dummy = pd.get_dummies(df[cols])
+    # bring the dummies along
+    return pd.concat([df,dummy],axis=1)
 
 def split_data(df):
     '''Split into train, validate, test with a 60/20/20 ratio'''

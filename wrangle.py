@@ -24,21 +24,25 @@ def wrangle_wildfires():
     filename = 'ca_fire.csv'
     # check for file
     if not os.path.isfile(filename):
-        if not os.path.isfile('ca_fire1.csv'):
-            df1 = pd.read_csv('https://media.githubusercontent.com/media/tkephart96/ca_wildfires/main/ca_fire1.csv',index_col='Unnamed: 0')
-        else:
-            df1 = pd.read_csv('ca_fire1.csv')
-        if not os.path.isfile('ca_fire2.csv'):
-            df2 = pd.read_csv('https://media.githubusercontent.com/media/tkephart96/ca_wildfires/main/ca_fire2.csv',index_col='Unnamed: 0')
-        else:
-            df2 = pd.read_csv('ca_fire2.csv')
-        df3 = pd.concat([df1,df2])
-        df3.to_csv(filename,index=False)
-        return df3
+        # pull prebuilt from gist.github
+        df = pd.read_csv('https://gist.githubusercontent.com/tkephart96/d292c7c27bd2ddffec6c0ce6e7c103ba/raw/02ea7793b4deffaccbe5642bea41d55fd2d03b23/ca_fire.csv')
+        # cache it
+        df.to_csv('ca_fire.csv',index=False)
+        return df
     # get prebuilt wildfire date
     else:
         # read prebuilt csv
         return pd.read_csv('ca_fire.csv')
+
+def encode(df):
+    '''Encode categorical columns'''
+    # columns to encode
+    cols = ['cause','most_common_water_source','most_common_species_group']
+    # cols = ['cause_class','cause','county','most_common_water_source','most_common_species','most_common_species_group']
+    # encode the dummies
+    dummy = pd.get_dummies(df[cols])
+    # bring the dummies along
+    return pd.concat([df,dummy],axis=1)
 
 def split_data(df):
     '''Split into train, validate, test with a 60/20/20 ratio'''
