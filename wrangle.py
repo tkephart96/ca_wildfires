@@ -24,7 +24,17 @@ def wrangle_wildfires():
     filename = 'ca_fire.csv'
     # check for file
     if not os.path.isfile(filename):
-        return pd.read_csv('')
+        if not os.path.isfile('ca_fire1.csv'):
+            df1 = pd.read_csv('https://media.githubusercontent.com/media/tkephart96/ca_wildfires/main/ca_fire1.csv',index_col='Unnamed: 0')
+        else:
+            df1 = pd.read_csv('ca_fire1.csv')
+        if not os.path.isfile('ca_fire2.csv'):
+            df2 = pd.read_csv('https://media.githubusercontent.com/media/tkephart96/ca_wildfires/main/ca_fire2.csv',index_col='Unnamed: 0')
+        else:
+            df2 = pd.read_csv('ca_fire2.csv')
+        df3 = pd.concat([df1,df2])
+        df3.to_csv(filename,index=False)
+        return df3
     # get prebuilt wildfire date
     else:
         # read prebuilt csv
