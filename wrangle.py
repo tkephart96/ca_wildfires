@@ -2,22 +2,33 @@
 Wrangle CA wildfire, tree, and air quality data from a pre-built dataset
 
 Functions:
-- get_fire
+- wrangle_wildfires
+    - get_fire
+    - prep_fire
 - split_data
 - std
 '''
 
 ##### IMPORTS #####
+
 import pandas as pd
+import os
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-
 ##### FUNCTIONS #####
 
-def get_fire():
-    '''Acquire pre-built 1997-2018 data'''
-    return pd.read_csv('ca_fire.csv')
+def wrangle_wildfires():
+    '''Wrangle together CA wildfire data'''
+    # fire file
+    filename = 'ca_fire.csv'
+    # check for file
+    if not os.path.isfile(filename):
+        return pd.read_csv('')
+    # get prebuilt wildfire date
+    else:
+        # read prebuilt csv
+        return pd.read_csv('ca_fire.csv')
 
 def split_data(df):
     '''Split into train, validate, test with a 60/20/20 ratio'''
