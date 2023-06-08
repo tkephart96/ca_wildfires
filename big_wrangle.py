@@ -151,8 +151,6 @@ def get_fires():
 
 def prep_fires(fire):
     '''Prepare fire data'''
-    # drop geometric map shape
-    fire = fire.drop(columns='Shape')
     # make the columns stop yelling at me
     fire.columns = fire.columns.str.lower()
     # get rid of a few nulls to create county_code column
@@ -248,83 +246,112 @@ def wrangle_forest_fires():
 
 def wrangle_wildfires():
     '''Wrangle together CA wildfire data'''
-    # get forest fire and air data for merge
-    fpt = wrangle_forest_fires()
-    caq = wrangle_air_quality()
-    # forest fire and air data merge on data and county to forest fire
-    ca = pd.merge(left=fpt,right=caq,how='left',
-                    left_on=['discovery_date','county_code'],
-                    right_on=[('date_local',''),('county_code','')])
-    # rename for readability and ease of use
-    ca.columns = [
-        'fire_year',
-        'date',
-        'time',
-        'cause_class',
-        'cause',
-        'fire_size',
-        'fire_size_class',
-        'lat',
-        'long',
-        'fips_code',
-        'county',
-        'county_code1',
-        'measurement_year',
-        'tree_county_code',
-        'latitude_y',
-        'longitude_y',
-        'elevation',
-        'trees_per_acre',
-        'water_on_plot',
-        'species',
-        'species_group',
-        'height',
-        'diameter',
-        'tree_alive',
-        'invasive_sampling',
-        'date_local',
-        'county_code2',
-        'bp_mean',
-        'co_mean',
-        'dp_mean',
-        'temp_mean',
-        'humidity_mean',
-        'wind_direction_mean',
-        'wind_speed_mean']
-    # keep necessary columns, drop others
-    ca = ca[[
-        'date',
-        'time',
-        'cause_class',
-        'cause',
-        'fire_size',
-        'fire_size_class',
-        'lat',
-        'long',
-        'elevation',
-        'county',
-        'trees_per_acre',
-        'water_on_plot',
-        'species',
-        'species_group',
-        'height',
-        'diameter',
-        'tree_alive',
-        'invasive_sampling',
-        'co_mean',
-        'temp_mean',
-        'humidity_mean',
-        'wind_direction_mean',
-        'wind_speed_mean']]
-    # get rid of nulls
-    ca = ca[(ca.co_mean.notna())&(ca.wind_speed_mean.notna())&(ca.humidity_mean.notna())&(ca.wind_direction_mean.notna())&(ca.time.notna())]
-    # map easy categorical values to 1 and 0
-    ca.tree_alive = ca.tree_alive.map({'Live tree':1,'Dead tree':0})
-    ca.invasive_sampling = ca.invasive_sampling.map({'Invasive plant data collected on all accessible land conditions':1,'Not collecting invasive plant data':0})
-    # cache locally
-    ca.to_csv('ca_fire.csv',index=False)
-    # put out wildfires
-    return ca
+    # fire file
+    filename = 'ca_fire.csv'
+    # check for file
+    if not os.path.isfile(filename):
+        # get forest fire and air data for merge
+        fpt = wrangle_forest_fires()
+        caq = wrangle_air_quality()
+        # forest fire and air data merge on data and county to forest fire
+        ca = pd.merge(left=fpt,right=caq,how='left',
+                        left_on=['discovery_date','county_code'],
+                        right_on=[('date_local',''),('county_code','')])
+        # rename for readability and ease of use
+        ca.columns = [
+            'fire_year',
+            'date',
+            'time',
+            'cause_class',
+            'cause',
+            'fire_size',
+            'fire_size_class',
+            'lat',
+            'long',
+            'fips_code',
+            'county',
+            'county_code1',
+            'measurement_year',
+            'tree_county_code',
+            'latitude_y',
+            'longitude_y',
+            'elevation',
+            'trees_per_acre',
+            'water_on_plot',
+            'species',
+            'species_group',
+            'height',
+            'diameter',
+            'tree_alive',
+            'invasive_sampling',
+            'date_local',
+            'county_code2',
+            'bp_mean',
+            'co_mean',
+            'dp_mean',
+            'temp_mean',
+            'humidity_mean',
+            'wind_direction_mean',
+            'wind_speed_mean']
+        # keep necessary columns, drop others
+        ca = ca[[
+            'date',
+            'time',
+            'cause_class',
+            'cause',
+            'fire_size',
+            'fire_size_class',
+            'lat',
+            'long',
+            'elevation',
+            'county',
+            'trees_per_acre',
+            'water_on_plot',
+            'species',
+            'species_group',
+            'height',
+            'diameter',
+            'tree_alive',
+            'invasive_sampling',
+            'co_mean',
+            'temp_mean',
+            'humidity_mean',
+            'wind_direction_mean',
+            'wind_speed_mean']]
+        # get rid of nulls
+        ca = ca[(ca.co_mean.notna())&(ca.wind_speed_mean.notna())&(ca.humidity_mean.notna())&(ca.wind_direction_mean.notna())&(ca.time.notna())]
+        # map easy categorical values to 1 and 0
+        ca.tree_alive = ca.tree_alive.map({'Live tree':1,'Dead tree':0})
+        ca.invasive_sampling = ca.invasive_sampling.map({'Invasive plant data collected on all accessible land conditions':1,'Not collecting invasive plant data':0})
+        # make datetime to create features
+        ca.date = ca.date.astype('datetime64[ns]')
+        # fix dtype
+        ca.water_on_plot = ca.water_on_plot.astype(str)
+        # get unique values for renaming
+        water = ca.water_on_plot.value_counts().sort_index().index.to_list()
+        # rename values
+        ca.water_on_plot = ca.water_on_plot.map({
+            water[0]:'ditch_canal',
+            water[1]:'flood_zone',
+            water[2]:'none',
+            water[3]:'temp_water',
+            water[4]:'permanent_small',
+            water[5]:'permanent_water',
+            water[6]:'temp_water',
+            water[7]:'none'})
+        # make all values lowercase
+        for col in ca.select_dtypes(include=('object')).columns:
+            ca[col] = ca[col].str.lower()
+        # make features
+        ca['month'] = ca.date.dt.month.copy()
+        ca['day_of_year'] = ca.date.dt.dayofyear.copy()
+        # cache locally
+        ca.to_csv('ca_fire.csv',index=False)
+        # put out wildfires
+        return ca
+    else:
+        # read prebuilt csv
+        return pd.read_csv('ca_fire.csv')
 
 def split_data(df):
     '''Split into train, validate, test with a 60/20/20 ratio'''
