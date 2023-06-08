@@ -2,7 +2,7 @@
 Wrangle CA wildfire, tree, and air quality data from a pre-built dataset
 
 Functions:
-- get_fire2018
+- get_fire
 - split_data
 - std
 '''
@@ -14,9 +14,6 @@ from sklearn.preprocessing import StandardScaler
 
 
 ##### FUNCTIONS #####
-def get_fire2018():
-    '''Acquire pre-built 2018 data'''
-    return pd.read_csv('ca_fire2018.csv')
 
 def get_fire():
     '''Acquire pre-built 1997-2018 data'''
