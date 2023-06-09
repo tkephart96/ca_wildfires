@@ -16,7 +16,7 @@ California is the most wildfire-prone state in the United States. In 2021, over 
 
 ### Initial Thoughts
 
-My initial hypothesis is that I will be able to use air quality and weather data (such as temperaure and winds) from the Environmental Protection Agency (EPA), tree data (such as species and diameter) from the US Forest Service (USFS), and wildfire data (such as time of day and location) from the US Department of Agriculture (USDA) to create a model that can roughly predict the size of wildfires in California.
+My initial hypothesis is that I will be able to use air quality and weather data (such as temperature and winds) from the Environmental Protection Agency (EPA), tree data (such as species and diameter) from the US Forest Service (USFS), and wildfire data (such as time of day and location) from the US Department of Agriculture (USDA) to create a model that can roughly predict the size of wildfires in California.
 
 ## The Plan
 
@@ -87,7 +87,7 @@ My initial hypothesis is that I will be able to use air quality and weather data
 | day_of_year                 | Day          | The day of the year the fire was discovered and air quality measured                                                                                                                |
 | Additional Features         | Encoded      | Encoded categorical columns used for modeling                                                                                                                                       |
 | six_cali                    | Categorical  | Binned counties based on the old proposal to split California into 6 states                                                                                                         |
-| most_common_is_hardwood     | Boolean      | Whether or not the most common tree species in the countyfor that year is a hardwood tree or a softwood tree                                                                        |
+| most_common_is_hardwood     | Boolean      | Whether or not the most common tree species in the county for that year is a hardwood tree or a softwood tree                                                                        |
 
 ## Steps to Reproduce
 
