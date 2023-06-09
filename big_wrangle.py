@@ -27,6 +27,7 @@ Functions:
 
 ##### IMPORTS #####
 
+import numpy as np
 import pandas as pd
 import sqlite3
 import requests
@@ -215,6 +216,18 @@ def prep_forest(pt):
     # map easy categorical values to 1 and 0
     pt.tree_status_code_name = pt.tree_status_code_name.map({'Live tree':1,'Dead tree':0})
     pt.invasive_sampling_status_code_name = pt.invasive_sampling_status_code_name.map({'Invasive plant data collected on all accessible land conditions':1,'Not collecting invasive plant data':0})
+    # fix dtype
+    pt.water_on_plot_code_name = pt.water_on_plot_code_name.astype(str)
+    # boolean water values
+    pt.water_on_plot_code_name = pt.water_on_plot_code_name.map({
+        'Flood zones - evidence of flooding WHEN water_on_plot_code = bodies of water exceed their natural banks':1,
+        'None - no water sources within the accessible forest land condition class':0,
+        'Other temporary water':1,
+        'Permanent streams or ponds too small to qualify as noncensus water':1,
+        'Temporary streams':1,
+        '':0,
+        'Ditch/canal - human-made channels used as a means of moving water, e.g., for irrigation or drainage, which are too small to qualify as noncensus water':1,
+        'Permanent water in the form of deep swamps, bogs, marshes without standing trees present and less than 1.0 acre in size, or with standing trees':1})
     # Performed 9 aggregations grouped on columns: 'measurement_year', 'tree_county_code'
     # used for merge so each row has most common tree and stats for county and year
     return pt.groupby(
@@ -222,7 +235,7 @@ def prep_forest(pt):
             ).agg(
                 elevation_mean=('elevation', 'mean'), 
                 trees_per_acre_mean=('trees_per_acre_unadjusted', 'mean'),
-                most_common_water_source=('water_on_plot_code_name', lambda s: s.value_counts().index[0]),
+                percent_chance_water_nearby=('water_on_plot_code_name', 'mean'),
                 most_common_species=('species_common_name', lambda s: s.value_counts().index[0]),
                 most_common_species_group=('species_group_code_name', lambda s: s.value_counts().index[0]),
                 height_mean=('total_height', 'mean'),
@@ -293,7 +306,7 @@ def wrangle_wildfires():
             'tree_county_code',
             'elevation_mean',
             'trees_per_acre_mean',
-            'most_common_water_source',
+            'percent_chance_water_nearby',
             'most_common_species',
             'most_common_species_group',
             'height_mean',
@@ -322,8 +335,7 @@ def wrangle_wildfires():
             'elevation_mean',
             'county',
             'trees_per_acre_mean',
-            'most_common_water_source',
-            'most_common_species',
+            'percent_chance_water_nearby',
             'most_common_species_group',
             'height_mean',
             'diameter_mean',
@@ -338,26 +350,38 @@ def wrangle_wildfires():
         ca = ca.dropna()
         # make datetime to create features
         ca.date = ca.date.astype('datetime64[ns]')
-        # fix dtype
-        ca.most_common_water_source = ca.most_common_water_source.astype(str)
-        # get unique values for renaming
-        water = ca.most_common_water_source.value_counts().sort_index().index.to_list()
-        # rename values
-        ca.most_common_water_source = ca.most_common_water_source.map({
-            water[0]:'ditch_canal',
-            water[1]:'flood_zone',
-            water[2]:'none',
-            water[3]:'temp_water',
-            water[4]:'permanent_small',
-            water[5]:'permanent_water',
-            water[6]:'temp_water',
-            water[7]:'none'})
         # make all values lowercase
         for col in ca.select_dtypes(include=('object')).columns:
             ca[col] = ca[col].str.lower()
-        # make features
+        # make time features
         ca['month'] = ca.date.dt.month.copy()
         ca['day_of_year'] = ca.date.dt.dayofyear.copy()
+        # bin counties
+        ca.county = ca.county.str.replace(' county','')
+        jefferson = ['butte', 'colusa', 'del norte', 'glenn', 'humboldt', 'lake', 'lassen', 'mendocino', 'modoc', 'plumas', 'shasta', 'siskiyou', 'tehama', 'trinity']
+        north_cali = ['amador', 'el dorado', 'marin', 'napa', 'nevada', 'placer', 'sacramento', 'sierra', 'solano', 'sonoma', 'sutter', 'yolo', 'yuba']
+        silicon_valley = ['alameda', 'contra costa', 'monterey', 'san benito', 'san francisco', 'san mateo', 'santa clara', 'santa cruz']
+        central_cali = ['alpine', 'calaveras', 'fresno', 'inyo', 'kern', 'kings', 'madera', 'mariposa', 'merced', 'mono', 'san joaquin', 'stanislaus', 'tulare', 'tuolumne']
+        west_cali = ['los angeles', 'san luis obispo', 'santa barbara', 'ventura']
+        south_cali = ['imperial', 'orange', 'riverside', 'san bernardino', 'san diego']
+        ca['six_cali'] = np.where(ca.county.isin(jefferson),'jefferson','')
+        ca['six_cali'] = np.where(ca.county.isin(north_cali),'north_cali',ca['six_cali'])
+        ca['six_cali'] = np.where(ca.county.isin(silicon_valley),'silicon_valley',ca['six_cali'])
+        ca['six_cali'] = np.where(ca.county.isin(central_cali),'central_cali',ca['six_cali'])
+        ca['six_cali'] = np.where(ca.county.isin(west_cali),'west_cali',ca['six_cali'])
+        ca['six_cali'] = np.where(ca.county.isin(south_cali),'south_cali',ca['six_cali'])
+        # bin species group hard or soft
+        softwoods = ['woodland softwoods','other western softwoods','douglas-fir','lodgepole pine','ponderosa and jeffrey pines','true fir','redwood','incense-cedar']
+        hardwoods = ['woodland hardwoods','other western hardwoods','cottonwood and aspen','oak']
+        ca['most_common_is_hardwood'] = np.where(ca.most_common_species_group.isin(hardwoods),1,0)
+        # map cause class values
+        ca.cause_class = ca.cause_class.map({
+            'human':'human',
+            'natural':'natural',
+            'missing data/not specified/undetermined':'undetermined'
+        })
+        # handle outlier fire size, if it's 1000 acres that's bad
+        ca = ca[ca['fire_size'] < 1000]
         # cache locally
         ca.to_csv('ca_fire.csv',index=False)
         # put out wildfires
@@ -369,7 +393,7 @@ def wrangle_wildfires():
 def encode(df):
     '''Encode categorical columns'''
     # columns to encode
-    cols = ['cause','most_common_water_source','most_common_species_group']
+    cols = ['cause_class','six_cali']
     # cols = ['cause_class','cause','county','most_common_water_source','most_common_species','most_common_species_group']
     # encode the dummies
     dummy = pd.get_dummies(df[cols])
@@ -401,9 +425,9 @@ def std(train,validate,test,scale=None):
         scale = train.columns.to_list()
     std_scale = StandardScaler()
     Xtr,Xv,Xt = train[scale],validate[scale],test[scale]
-    Xtr = pd.DataFrame(std_scale.fit_transform(train[scale]),train.index,scale)
-    Xv = pd.DataFrame(std_scale.transform(validate[scale]),validate.index,scale)
-    Xt = pd.DataFrame(std_scale.transform(test[scale]),test.index,scale)
+    Xtr = pd.DataFrame(std_scale.fit_transform(train[scale]),train[scale].index,train[scale].columns)
+    Xv = pd.DataFrame(std_scale.transform(validate[scale]),validate[scale].index,validate[scale].columns)
+    Xt = pd.DataFrame(std_scale.transform(test[scale]),test[scale].index,test[scale].columns)
     for col in scale:
         Xtr = Xtr.rename(columns={col: f'{col}_s'})
         Xv = Xv.rename(columns={col: f'{col}_s'})

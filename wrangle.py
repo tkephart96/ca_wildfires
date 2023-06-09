@@ -25,7 +25,7 @@ def wrangle_wildfires():
     # check for file
     if not os.path.isfile(filename):
         # pull prebuilt from gist.github
-        df = pd.read_csv('https://gist.githubusercontent.com/tkephart96/d292c7c27bd2ddffec6c0ce6e7c103ba/raw/02ea7793b4deffaccbe5642bea41d55fd2d03b23/ca_fire.csv')
+        df = pd.read_csv('https://gist.githubusercontent.com/tkephart96/d3d91df1147055815f1e9245d4b6060e/raw/f4e0f6092d64ab89f2bfff9445509444ec096dd4/ca_fire.csv')
         # cache it
         df.to_csv('ca_fire.csv',index=False)
         return df
@@ -37,7 +37,7 @@ def wrangle_wildfires():
 def encode(df):
     '''Encode categorical columns'''
     # columns to encode
-    cols = ['cause','most_common_water_source','most_common_species_group']
+    cols = ['cause_class','six_cali']
     # cols = ['cause_class','cause','county','most_common_water_source','most_common_species','most_common_species_group']
     # encode the dummies
     dummy = pd.get_dummies(df[cols])
@@ -69,9 +69,9 @@ def std(train,validate,test,scale=None):
         scale = train.columns.to_list()
     std_scale = StandardScaler()
     Xtr,Xv,Xt = train[scale],validate[scale],test[scale]
-    Xtr = pd.DataFrame(std_scale.fit_transform(train[scale]),train.index,scale)
-    Xv = pd.DataFrame(std_scale.transform(validate[scale]),validate.index,scale)
-    Xt = pd.DataFrame(std_scale.transform(test[scale]),test.index,scale)
+    Xtr = pd.DataFrame(std_scale.fit_transform(train[scale]),train[scale].index,train[scale].columns)
+    Xv = pd.DataFrame(std_scale.transform(validate[scale]),validate[scale].index,validate[scale].columns)
+    Xt = pd.DataFrame(std_scale.transform(test[scale]),test[scale].index,test[scale].columns)
     for col in scale:
         Xtr = Xtr.rename(columns={col: f'{col}_s'})
         Xv = Xv.rename(columns={col: f'{col}_s'})
