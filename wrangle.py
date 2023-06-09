@@ -25,7 +25,7 @@ def wrangle_wildfires():
     # check for file
     if not os.path.isfile(filename):
         # pull prebuilt from gist.github
-        df = pd.read_csv('https://gist.githubusercontent.com/tkephart96/d3d91df1147055815f1e9245d4b6060e/raw/f4e0f6092d64ab89f2bfff9445509444ec096dd4/ca_fire.csv')
+        df = pd.read_csv('https://gist.githubusercontent.com/tkephart96/21d138cad542f0a8a123ba02911613c1/raw/f87b42bc585be00779d8e56a30b45787d85691ff/ca_fire.csv')
         # cache it
         df.to_csv('ca_fire.csv',index=False)
         return df
