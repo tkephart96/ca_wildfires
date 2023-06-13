@@ -87,11 +87,12 @@ My initial hypothesis is that I will be able to use air quality and weather data
 | day_of_year                 | Day          | The day of the year the fire was discovered and air quality measured                                                                                                                |
 | Additional Features         | Encoded      | Encoded categorical columns used for modeling                                                                                                                                       |
 | six_cali                    | Categorical  | Binned counties based on the old proposal to split California into 6 states                                                                                                         |
-| most_common_is_hardwood     | Boolean      | Whether or not the most common tree species in the county for that year is a hardwood tree or a softwood tree                                                                        |
+| most_common_is_hardwood     | Boolean      | Whether or not the most common tree species in the county for that year is a hardwood tree or a softwood tree                                                                       |
 
 ## Steps to Reproduce
 
 1) Clone this repo
+   a) You may need to update your Python Libraries, my libraries were updated on 5 June, 2023 for this project
 2) For a quick run
    - Verify `import wrangle as w` is in the imports section of final_notebook
    - Run final_notebook
