@@ -8,6 +8,10 @@ Predict the size in acres of California wildfires using data from 2001 to 2018 (
 
 California is the most wildfire-prone state in the United States. In 2021, over 9,000 individual wildfires burned in the Southwestern state ravishing nearly 2.23 million acres. California accounted for roughly 31 percent of all acres burned due to wildfires in the US. I have decided to look into some elements that might be able to determine the size of said wildfires.
 
+USDA Data Citiation
+
+- Short, Karen C. 2022. Spatial wildfire occurrence data for the United States, 1992-2020 [FPA_FOD_20221014]. 6th Edition. Fort Collins, CO: Forest Service Research Data Archive. https://doi.org/10.2737/RDS-2013-0009.6
+
 ### Project Goal
 
 * Discover drivers of wildfire size
